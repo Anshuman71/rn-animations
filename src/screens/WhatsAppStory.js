@@ -12,7 +12,6 @@ import {
   PanGestureHandler,
   TouchableOpacity,
 } from 'react-native-gesture-handler';
-import WhatsAppContact from './src/screens/WhatsAppContact';
 
 const {width, height} = Dimensions.get('window');
 const TOP = height * 0.3;
@@ -61,5 +60,44 @@ export default function App() {
     };
   });
 
-  return <WhatsAppContact />;
+  return (
+    <View style={{flex: 1, justifyContent: 'center', backgroundColor: 'grey'}}>
+      <StatusBar translucent backgroundColor="#000000" />
+      <TouchableOpacity onPress={() => (y.value = 0)}>
+        <Text>Reset</Text>
+      </TouchableOpacity>
+      <Animated.View
+        style={[
+          {
+            width,
+            height,
+            position: 'absolute',
+            top: 0,
+            zIndex: 2,
+            right: 0,
+            backgroundColor: 'black',
+          },
+          background,
+        ]}></Animated.View>
+      <PanGestureHandler onGestureEvent={gestureHandler}>
+        <Animated.Image
+          style={[
+            {
+              width,
+              height: height / 2.5,
+              position: 'absolute',
+              top: TOP,
+              zIndex: 5,
+              backgroundColor: 'black',
+            },
+            animatedStyle,
+          ]}
+          source={{
+            uri:
+              'https://images.unsplash.com/photo-1583439869427-bcdd24516ad9?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=700&q=80',
+          }}
+        />
+      </PanGestureHandler>
+    </View>
+  );
 }
