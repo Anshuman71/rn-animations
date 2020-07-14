@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import {
   Dimensions,
   View,
@@ -10,9 +10,11 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
+  useAnimatedGestureHandler,
   useAnimatedStyle,
   useDerivedValue,
   withTiming,
+  max,
 } from 'react-native-reanimated';
 import {
   PanGestureHandler,
@@ -24,11 +26,20 @@ const DEFAULT_HEIGHT = height * 0.3;
 const MIN_HEIGHT = height * 0.1;
 const MAX_HEIGHT = height * 0.5;
 
+const DARK = '#1e2c33';
+const DARK_BG = '#0f1d24';
+const TEAL = '#128C7E';
+const TEAL_DARK = '#075E54';
+
 export default function WhatsAppContact() {
   const translationY = useSharedValue(0);
+  const maxTranslate = useSharedValue(MAX_HEIGHT);
   const imageHeight = useDerivedValue(() => {
-    if (DEFAULT_HEIGHT - translationY.value > MIN_HEIGHT) {
-      return DEFAULT_HEIGHT - translationY.value;
+    const newHeight = DEFAULT_HEIGHT - translationY.value;
+    if (newHeight > MIN_HEIGHT && newHeight < MAX_HEIGHT) {
+      return newHeight;
+    } else if (newHeight >= MAX_HEIGHT) {
+      return MAX_HEIGHT;
     } else {
       return MIN_HEIGHT;
     }
@@ -36,36 +47,62 @@ export default function WhatsAppContact() {
 
   const opacity = useDerivedValue(() => {
     const range = DEFAULT_HEIGHT - MIN_HEIGHT;
-    return 1 - (DEFAULT_HEIGHT - imageHeight.value) / range;
+    if (imageHeight.value >= DEFAULT_HEIGHT) {
+      return 1;
+    } else {
+      return 1 - (DEFAULT_HEIGHT - imageHeight.value) / range;
+    }
+  });
+
+  const containerY = useDerivedValue(() => {
+    const isLess =
+      translationY.value <= maxTranslate.value - (MAX_HEIGHT - MIN_HEIGHT);
+    if (imageHeight.value <= MIN_HEIGHT && isLess) {
+      return (-translationY.value);
+    }
+    return 0;
   });
 
   const textTranslate = useDerivedValue(() => {
     return (1 - opacity.value) * 10;
   });
 
-  const gestureHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      translationY.value = event.contentOffset.y;
+  const panHandler = useAnimatedGestureHandler({
+    onStart: (_, ctx) => {
+      ctx.startY = -translationY.value;
+    },
+    onActive: (event, ctx) => {
+      if (
+        ctx.startY + event.translationY < MAX_HEIGHT - DEFAULT_HEIGHT &&
+        maxTranslate.value >=
+          height + MAX_HEIGHT - MIN_HEIGHT - (ctx.startY + event.translationY)
+      ) {
+        translationY.value = -(ctx.startY + event.translationY);
+      }
     },
   });
 
-  const animatedStyle = useAnimatedStyle(() => {
+  const headerStyle = useAnimatedStyle(() => {
     return {
       height: imageHeight.value,
-      backgroundColor: 'green',
-      transform: [
-        {
-          translateY: translationY.value,
-        },
-      ],
+      backgroundColor: DARK,
+      ...StyleSheet.absoluteFill,
     };
   });
 
   const overlay = useAnimatedStyle(() => {
     return {
-      ...StyleSheet.absoluteFill,
-      height: imageHeight.value,
+      flex: 1,
       opacity: opacity.value,
+    };
+  });
+  const contentContainer = useAnimatedStyle(() => {
+    return {
+      flex: 1,
+      backgroundColor: DARK_BG,
+      minHeight: 1200,
+      paddingVertical: 10,
+      transform: [{translateY: containerY.value}],
     };
   });
 
@@ -76,7 +113,7 @@ export default function WhatsAppContact() {
       fontSize: 30,
       fontWeight: '900',
       color: 'white',
-      left: 20,
+      left: 10,
       transform: [
         {translateX: textTranslate.value},
         {scale: 20 / (textTranslate.value + 20)},
@@ -85,29 +122,41 @@ export default function WhatsAppContact() {
   });
 
   return (
-    <View style={{flex: 1, justifyContent: 'center'}}>
-      <StatusBar translucent backgroundColor="#000000" />
-      <Animated.ScrollView onScroll={gestureHandler}>
-        <Animated.View
-          style={[
-            {
-              width,
-              zIndex: 5,
-            },
-            animatedStyle,
-          ]}>
-          <Animated.Image
-            source={{
-              uri:
-                'https://images.unsplash.com/photo-1594409855476-29909f35c73c?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=700&q=80',
+    <View style={{flex: 1}}>
+      <StatusBar translucent backgroundColor={DARK} />
+      <PanGestureHandler onGestureEvent={panHandler}>
+        <Animated.View style={{flex: 1}}>
+          <Animated.View
+            style={[
+              {
+                width,
+                zIndex: 5,
+              },
+              headerStyle,
+            ]}>
+            <Animated.Image
+              source={{
+                uri:
+                  'https://images.unsplash.com/photo-1594409855476-29909f35c73c?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=700&q=80',
+              }}
+              resizeMode="cover"
+              style={overlay}
+            />
+            <Animated.Text style={title}>Madhav Kaushik</Animated.Text>
+          </Animated.View>
+          <Animated.View
+            onLayout={(event) => {
+              maxTranslate.value = MAX_HEIGHT + event.nativeEvent.layout.height;
             }}
-            resizeMode="cover"
-            style={overlay}
-          />
-          <Animated.Text style={title}>Madhav Kaushik</Animated.Text>
+            style={contentContainer}>
+            <View style={{flex: 1, paddingHorizontal: 10}}>
+              <Text style={{color: TEAL, fontSize: 18}}>
+                Media, links and docs
+              </Text>
+            </View>
+          </Animated.View>
         </Animated.View>
-        <View style={{height: height * 2, width, backgroundColor: 'orange'}} />
-      </Animated.ScrollView>
+      </PanGestureHandler>
     </View>
   );
 }
