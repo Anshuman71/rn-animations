@@ -27,21 +27,11 @@ const TEAL = '#128C7E';
 const TEAL_DARK = '#075E54';
 
 const config = {
-  damping: 9,
+  damping: 15,
 };
 
 export default function WhatsAppContact() {
-  const translationY = useSharedValue(0);
-  const imageHeight = useDerivedValue(() => {
-    const newHeight = DEFAULT_HEIGHT - translationY.value;
-    if (newHeight > MIN_HEIGHT && newHeight < MAX_HEIGHT) {
-      return newHeight;
-    } else if (newHeight >= MAX_HEIGHT) {
-      return MAX_HEIGHT;
-    } else {
-      return MIN_HEIGHT;
-    }
-  });
+  const imageHeight = useSharedValue(DEFAULT_HEIGHT);
 
   const opacity = useDerivedValue(() => {
     const range = DEFAULT_HEIGHT - MIN_HEIGHT;
@@ -58,10 +48,17 @@ export default function WhatsAppContact() {
   const gestureHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       let newValue = event.contentOffset.y;
-      if (newValue === 0 && imageHeight.value < MAX_HEIGHT) {
-        newValue = DEFAULT_HEIGHT - MAX_HEIGHT;
+      if (newValue > 0) {
+        newValue = imageHeight.value - newValue;
+      } else if (newValue === 0) {
+        newValue = MAX_HEIGHT;
+      } else {
+        newValue = imageHeight.value + newValue;
       }
-      translationY.value = withSpring(newValue, config);
+      if (newValue <= MIN_HEIGHT) {
+        newValue = MIN_HEIGHT;
+      }
+      imageHeight.value = withSpring(newValue, config);
     },
   });
 
